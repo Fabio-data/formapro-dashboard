@@ -33,6 +33,8 @@ No uso ORM, ni capa de API intermedia, ni librería de estado. Para 1000 filas m
 
 **Export CSV** del subset filtrado, con BOM UTF-8 para que Excel respete los acentos.
 
+**Tema claro / oscuro** con toggle, persistido en `localStorage` y respetando el `prefers-color-scheme` del sistema en la primera visita. Un script inline aplica el tema antes del primer paint para evitar el flash de tema equivocado.
+
 ## Decisiones que tomé
 
 ### Server Component lee Supabase, sin API route
@@ -69,6 +71,8 @@ En Supabase confirmé:
 `lib/format.ts` usa `Intl.NumberFormat` con el código ISO 4217 que viene en cada fila. Nada de `'$'`, `'€'` o `'COP'` en código. Si llega un código desconocido, cae al locale sin símbolo y muestra el código al lado.
 
 Y los ingresos se agrupan por moneda en `dashboard-client.tsx`: si hay `COP + USD + EUR` mezclados, no los sumo a ciegas — muestro la moneda dominante en la KPI principal y las demás como pista.
+
+Además, solo anexo el código ISO cuando el símbolo es ambiguo: `$` es genérico (COP/USD/MXN…) así que muestro `$ 120.000,00 COP`, pero `US$` ya identifica la moneda, así que no escribo `US$ 1.500 USD` redundante.
 
 ### CSV decente
 
@@ -124,7 +128,9 @@ Usé un asistente de código para:
 
 Lo que corregí / decidí yo:
 - El agrupamiento por moneda (la primera versión sumaba todas las monedas al "Ingresos totales" — mal).
+- El formato de moneda redundante ("US$ 1.500 USD"): ahora solo anexa el código cuando el símbolo es ambiguo.
 - Los security headers de `next.config.ts` y la validación de URL en `lib/supabase.ts`.
 - El control sobre qué va y qué no va al `.env.example`.
 - Que el filtrado fuera 100% client-side sobre los datos del server, sin API route.
+- En el dark mode: el `color` del body NO se transiciona porque Chromium lo congela cuando depende de un `var()` que cambia (dejaba el texto invisible al alternar tema).
 - El tono de este README.
