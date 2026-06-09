@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* warm sand neutrals */
+  --color-bg:        oklch(96.5% 0.012 78);
+  --color-surface:   oklch(99% 0.005 78);
+  --color-surface-2: oklch(94% 0.014 78);
+  --color-surface-3: oklch(91% 0.018 78);
+  --color-rule:      oklch(88% 0.015 78);
+  --color-rule-2:    oklch(82% 0.018 78);
+  --color-ink:       oklch(22% 0.015 75);
+  --color-ink-soft:  oklch(34% 0.018 75);
+  --color-muted:     oklch(50% 0.022 75);
+  --color-faint:     oklch(64% 0.018 75);
+
+  /* mint/teal accent */
+  --color-accent:        oklch(58% 0.15 170);
+  --color-accent-strong: oklch(45% 0.16 170);
+  --color-accent-soft:   oklch(92% 0.04 170);
+  --color-accent-ink:    oklch(30% 0.10 170);
+
+  /* tangerine for refunds */
+  --color-warn:       oklch(64% 0.16 55);
+  --color-warn-soft:  oklch(94% 0.045 65);
+  --color-warn-ink:   oklch(35% 0.13 55);
+
+  /* coral for failed */
+  --color-danger:      oklch(60% 0.18 25);
+  --color-danger-soft: oklch(94% 0.04 25);
+  --color-danger-ink:  oklch(36% 0.16 25);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, oklch(94% 0.05 170 / 0.3), transparent 65%),
+    radial-gradient(900px 500px at -10% 110%, oklch(95% 0.04 90 / 0.35), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection { background: var(--color-accent-soft); color: var(--color-accent-ink); }
+
+/* ============ Primitives ============ */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  box-shadow:
+    0 1px 2px oklch(20% 0.015 75 / 0.04),
+    0 8px 24px -8px oklch(20% 0.015 75 / 0.06);
+  border-radius: 18px;
+}
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, "JetBrains Mono", monospace;
+  font-feature-settings: "cv11";
+}
+
+.label-eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+/* ============ Charts (custom SVG) ============ */
+
+.line-chart path.l    { fill: none; stroke: var(--color-accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.line-chart path.area { fill: var(--color-accent); opacity: 0.12; stroke: none; }
+.line-chart .grid-l   { stroke: var(--color-rule); stroke-width: 1; stroke-dasharray: 3 5; }
+.line-chart .dot      { fill: var(--color-accent); stroke: var(--color-surface); stroke-width: 2; }
+.line-chart .axis-tick { fill: var(--color-muted); font-size: 10px; font-family: var(--font-mono), monospace; }
+
+/* ============ Lists ============ */
+
+.meter {
+  height: 6px;
+  background: var(--color-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+}
+
+/* ============ Scrollbar ============ */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-rule-2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-faint); }
