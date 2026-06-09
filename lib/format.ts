@@ -35,11 +35,20 @@ const cleanSpaces = (s: string) =>
   s.replace(/ /g, " ").replace(/ /g, " ");
 
 export function formatMoney(valor: number, moneda: string): string {
-  const f = getFormatter(moneda);
-  const out = cleanSpaces(f.format(valor));
-  return out.includes(moneda.toUpperCase())
-    ? out
-    : `${out} ${moneda.toUpperCase()}`;
+  const code = moneda.toUpperCase();
+  const out = cleanSpaces(getFormatter(moneda).format(valor));
+
+  // 1. Si Intl ya muestra el código ISO (EUR, JPY, COP raros...), no duplicar.
+  if (out.includes(code)) return out;
+
+  // 2. Si usa un símbolo que YA identifica la moneda (US$, CA$, €, £, ¥...),
+  //    tampoco anexamos el código: sería redundante ("US$ 1.500 USD").
+  const tieneSimboloEspecifico = /[A-Za-z]\$|[€£¥₩₹]/.test(out);
+  if (tieneSimboloEspecifico) return out;
+
+  // 3. Resto: "$" genérico (ambiguo entre COP/USD/MXN...) o fallback sin
+  //    símbolo (código ISO inválido) → anexamos el código para desambiguar.
+  return `${out} ${code}`;
 }
 
 export function formatNumber(n: number): string {

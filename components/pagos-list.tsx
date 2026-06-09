@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Pago, EstadoPago } from "@/lib/types";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 5;
 
 const ESTADO_STYLES: Record<EstadoPago, string> = {
   completed:

@@ -7,6 +7,7 @@ import { CursosList } from "./cursos-list";
 import { PagosList } from "./pagos-list";
 import { Filtros } from "./filtros";
 import { BotonExport } from "./boton-export";
+import { ThemeToggle } from "./theme-toggle";
 import { formatMoney, formatNumber } from "@/lib/format";
 import type { Pago, FiltrosState } from "@/lib/types";
 
@@ -105,7 +106,10 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
             )}
           </p>
         </div>
-        <BotonExport pagos={filtrados} />
+        <div className="flex items-center gap-2">
+          <BotonExport pagos={filtrados} />
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* FILTROS sticky */}

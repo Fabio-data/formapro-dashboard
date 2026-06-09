@@ -33,6 +33,35 @@
   --font-mono: var(--font-mono);
 }
 
+/* ============ Dark theme ============ */
+/* Override de los tokens var(--color-*) cuando html.dark está activo.
+   Los componentes usan var() en runtime, así que el switch es instantáneo. */
+html.dark {
+  --color-bg:        oklch(20% 0.012 75);
+  --color-surface:   oklch(24% 0.012 75);
+  --color-surface-2: oklch(28% 0.014 75);
+  --color-surface-3: oklch(32% 0.016 75);
+  --color-rule:      oklch(34% 0.015 75);
+  --color-rule-2:    oklch(44% 0.016 75);
+  --color-ink:       oklch(95% 0.012 78);
+  --color-ink-soft:  oklch(82% 0.014 78);
+  --color-muted:     oklch(64% 0.018 78);
+  --color-faint:     oklch(50% 0.018 78);
+
+  --color-accent:        oklch(72% 0.15 170);
+  --color-accent-strong: oklch(80% 0.16 170);
+  --color-accent-soft:   oklch(34% 0.06 170);
+  --color-accent-ink:    oklch(86% 0.12 170);
+
+  --color-warn:       oklch(72% 0.15 55);
+  --color-warn-soft:  oklch(36% 0.07 55);
+  --color-warn-ink:   oklch(84% 0.13 65);
+
+  --color-danger:      oklch(68% 0.17 25);
+  --color-danger-soft: oklch(34% 0.08 25);
+  --color-danger-ink:  oklch(84% 0.14 25);
+}
+
 html, body {
   background: var(--color-bg);
   color: var(--color-ink);
@@ -41,11 +70,25 @@ html, body {
   font-feature-settings: "cv11", "ss01";
 }
 
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
 body {
   background-image:
     radial-gradient(1200px 600px at 90% -10%, oklch(94% 0.05 170 / 0.3), transparent 65%),
     radial-gradient(900px 500px at -10% 110%, oklch(95% 0.04 90 / 0.35), transparent 60%);
   background-attachment: fixed;
+  /* Solo transicionamos el fondo. El color de texto NO se transiciona: Chromium
+     no interpola bien `color` cuando depende de un var() que cambia y lo deja
+     congelado en el valor previo (texto invisible al alternar tema). El cambio
+     instantáneo de color es imperceptible. */
+  transition: background-color 0.2s ease;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, oklch(72% 0.15 170 / 0.08), transparent 65%),
+    radial-gradient(900px 500px at -10% 110%, oklch(70% 0.12 90 / 0.07), transparent 60%);
 }
 
 ::selection { background: var(--color-accent-soft); color: var(--color-accent-ink); }
@@ -59,6 +102,12 @@ body {
     0 1px 2px oklch(20% 0.015 75 / 0.04),
     0 8px 24px -8px oklch(20% 0.015 75 / 0.06);
   border-radius: 18px;
+}
+
+html.dark .card {
+  box-shadow:
+    0 1px 2px oklch(0% 0 0 / 0.3),
+    0 8px 24px -8px oklch(0% 0 0 / 0.45);
 }
 
 .mono {
