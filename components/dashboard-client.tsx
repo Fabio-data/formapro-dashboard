@@ -8,6 +8,7 @@ import { PagosList } from "./pagos-list";
 import { Filtros } from "./filtros";
 import { BotonExport } from "./boton-export";
 import { ThemeToggle } from "./theme-toggle";
+import { LiveRefresh } from "./live-refresh";
 import { formatMoney, formatNumber } from "@/lib/format";
 import type { Pago, FiltrosState } from "@/lib/types";
 
@@ -107,6 +108,7 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <LiveRefresh />
           <BotonExport pagos={filtrados} />
           <ThemeToggle />
         </div>
