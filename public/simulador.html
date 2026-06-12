@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FormaPro · Simulador de pagos</title>
+<style>
+  :root {
+    --bg: #f7f3ec; --card: #fffdf9; --ink: #221c12; --soft: #5c5346;
+    --muted: #8a8073; --rule: #e0d8c9; --accent: #00926e; --accent-soft: #d6efe6;
+    --warn: #b9772a; --warn-soft: #f6e7d2; --danger: #c0492f; --danger-soft: #f6dcd4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 32px 20px 60px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--soft); font-size: 14px; margin: 0 0 24px; }
+  .mono { font-family: ui-monospace, "JetBrains Mono", monospace; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+  .field input {
+    border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px;
+    background: var(--card); color: var(--ink); font-size: 13px;
+    font-family: ui-monospace, monospace; outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 22px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  button.scene {
+    text-align: left; border: 1px solid var(--rule); border-radius: 16px;
+    background: var(--card); padding: 16px 18px; cursor: pointer;
+    transition: border-color .15s, transform .05s; color: var(--ink);
+    box-shadow: 0 1px 2px rgba(34,28,18,.04), 0 8px 22px -10px rgba(34,28,18,.08);
+  }
+  button.scene:hover { border-color: var(--accent); }
+  button.scene:active { transform: translateY(1px); }
+  button.scene .t { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  button.scene .d { font-size: 12.5px; color: var(--soft); margin-top: 5px; line-height: 1.4; }
+  .tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-left: auto; }
+  .tag.ok { background: var(--accent-soft); color: var(--accent); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .tag.bad { background: var(--danger-soft); color: var(--danger); }
+  .logwrap { border: 1px solid var(--rule); border-radius: 16px; background: var(--card); overflow: hidden; }
+  .logbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
+  .logbar .ttl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+  .logbar button { font-size: 11px; border: 1px solid var(--rule); background: var(--bg); border-radius: 8px; padding: 4px 10px; cursor: pointer; color: var(--soft); }
+  #log { margin: 0; padding: 14px 16px; max-height: 260px; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; }
+  #log .row { display: flex; gap: 10px; }
+  #log .ts { color: var(--muted); flex: none; }
+  #log .msg.ok { color: var(--accent); }
+  #log .msg.warn { color: var(--warn); }
+  #log .msg.bad { color: var(--danger); }
+  #log .msg.info { color: var(--soft); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6; }
+  .note b { color: var(--soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>FormaPro · Simulador de pagos</h1>
+  <p class="sub">Dispara pagos al webhook de n8n y míralos reflejarse en Supabase y en el dashboard. Cada botón cubre un escenario del enunciado.</p>
+
+  <div class="field">
+    <label>Webhook (producción)</label>
+    <input id="webhook" value="https://fabion8ntesting.app.n8n.cloud/webhook/formapro-pago" spellcheck="false" />
+  </div>
+  <div class="field">
+    <label>Email para el correo de bienvenida</label>
+    <input id="email" value="fabioandres226481@gmail.com" spellcheck="false" />
+  </div>
+
+  <div class="grid">
+    <button class="scene" onclick="pagoNuevo()">
+      <div class="t">Pago nuevo <span class="tag ok">1 fila + 1 email</span></div>
+      <div class="d">Un pago completed con id único. Aparece una fila nueva y llega un correo.</div>
+    </button>
+    <button class="scene" onclick="duplicado()">
+      <div class="t">Duplicado ×2 <span class="tag ok">sigue 1 fila</span></div>
+      <div class="d">El mismo id enviado dos veces. La PRIMARY KEY lo ignora: una sola fila.</div>
+    </button>
+    <button class="scene" onclick="reembolso()">
+      <div class="t">Reembolso <span class="tag warn">fila → refunded</span></div>
+      <div class="d">Primero completed, luego refunded con el mismo id. La fila cambia de estado.</div>
+    </button>
+    <button class="scene" onclick="datosSucios()">
+      <div class="t">Datos sucios <span class="tag warn">se normaliza</span></div>
+      <div class="d">Espacios, MAYÚSCULAS e importe "59,99 €". Entra limpio y numérico.</div>
+    </button>
+    <button class="scene" onclick="paralelo10()">
+      <div class="t">10 en paralelo <span class="tag ok">1 fila + 1 email</span></div>
+      <div class="d">Diez POST simultáneos del mismo id. Idempotencia bajo concurrencia.</div>
+    </button>
+    <button class="scene" onclick="fallido()">
+      <div class="t">Pago fallido <span class="tag bad">se descarta</span></div>
+      <div class="d">Estado failed. El Switch lo descarta: no entra a la base de datos.</div>
+    </button>
+  </div>
+
+  <div class="logwrap">
+    <div class="logbar">
+      <span class="ttl">Registro</span>
+      <button onclick="document.getElementById('log').innerHTML=''">Limpiar</button>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <p class="note">
+    <b>Cómo verlo:</b> tras disparar, mira la pestaña de <b>ejecuciones de n8n</b>, el <b>Table editor de Supabase</b> y el <b>dashboard</b> (se actualiza solo cada pocos segundos).<br>
+    Nota técnica: el navegador envía en modo <span class="mono">no-cors</span>, así que aquí no se lee la respuesta del servidor — la prueba está aguas abajo. El backup por terminal (<span class="mono">demo-pagos.ps1</span>) sí muestra la respuesta.
+  </p>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const webhook = () => $("webhook").value.trim();
+  const email = () => $("email").value.trim();
+
+  function log(msg, kind = "info") {
+    const el = document.createElement("div");
+    el.className = "row";
+    const now = new Date().toLocaleTimeString("es-CO", { hour12: false });
+    el.innerHTML = `<span class="ts">${now}</span><span class="msg ${kind}">${msg}</span>`;
+    const box = $("log");
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function shortId(prefix) {
+    return prefix + "-" + Date.now().toString().slice(-6);
+  }
+
+  // Envía un pago como form-urlencoded en modo no-cors (evita preflight CORS).
+  // n8n parsea el body en campos; el Code node los normaliza igual que JSON.
+  function post(payload) {
+    const body = new URLSearchParams(payload);
+    return fetch(webhook(), { method: "POST", mode: "no-cors", body });
+  }
+
+  const base = () => ({
+    nombre: "Demo en Vivo",
+    curso: "Power BI",
+    importe: "150000",
+    moneda: "COP",
+    estado: "completed",
+    fecha: new Date().toISOString(),
+    email: email(),
+  });
+
+  async function pagoNuevo() {
+    const id = shortId("PAY-DEMO");
+    await post({ ...base(), id_pago: id });
+    log(`Pago nuevo enviado · ${id} · completed · 150000 COP`, "ok");
+    log(`→ Debe aparecer 1 fila nueva y llegar 1 correo.`, "info");
+  }
+
+  async function duplicado() {
+    const id = shortId("PAY-DUP");
+    await post({ ...base(), id_pago: id, nombre: "Cliente Duplicado" });
+    await post({ ...base(), id_pago: id, nombre: "Cliente Duplicado" });
+    log(`Mismo id enviado 2 veces · ${id}`, "ok");
+    log(`→ La PRIMARY KEY lo ignora: debe quedar 1 sola fila.`, "info");
+  }
+
+  async function reembolso() {
+    const id = shortId("PAY-REF");
+    await post({ ...base(), id_pago: id, nombre: "Cliente Reembolso", importe: "200000" });
+    log(`Pago completed enviado · ${id} · 200000 COP`, "ok");
+    log(`Esperando 1.5s para mandar el reembolso...`, "info");
+    await new Promise((r) => setTimeout(r, 1500));
+    await post({ ...base(), id_pago: id, nombre: "Cliente Reembolso", importe: "200000", estado: "refunded" });
+    log(`Reembolso enviado · ${id} · refunded`, "warn");
+    log(`→ La misma fila debe cambiar a refunded (no se crea otra).`, "info");
+  }
+
+  async function datosSucios() {
+    const id = shortId("PAY-SUCIO");
+    await post({
+      id_pago: "  " + id + "  ",
+      nombre: "   ana    lopez  ",
+      email: "  " + email().toUpperCase() + " ",
+      curso: "  Excel   Avanzado ",
+      importe: "59,99 €",
+      moneda: "cop",
+      estado: " COMPLETED ",
+      fecha: new Date().toISOString(),
+    });
+    log(`Datos sucios enviados · ${id}`, "warn");
+    log(`→ Debe entrar: email en minúscula, importe 59.99, estado completed.`, "info");
+  }
+
+  async function paralelo10() {
+    const id = shortId("PAY-RACE");
+    log(`Disparando 10 POST en paralelo · ${id} ...`, "ok");
+    await Promise.all(Array.from({ length: 10 }, () =>
+      post({ ...base(), id_pago: id, nombre: "Race Test", importe: "99999" })
+    ));
+    log(`10 POST enviados (mismo id) · ${id}`, "ok");
+    log(`→ Idempotencia: debe quedar 1 fila y 1 email, no 10.`, "info");
+  }
+
+  async function fallido() {
+    const id = shortId("PAY-FAIL");
+    await post({ ...base(), id_pago: id, nombre: "Cliente Fallido", estado: "failed" });
+    log(`Pago fallido enviado · ${id} · failed`, "bad");
+    log(`→ El Switch lo descarta: NO debe entrar a la base de datos.`, "info");
+  }
+
+  log("Simulador listo. Elige un escenario.", "info");
+</script>
+</body>
+</html>
