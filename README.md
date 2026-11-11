@@ -2,15 +2,17 @@
 
 Dashboard de la Prueba 2 de Logali Group. Lee la tabla `pagos` de Supabase (que llené con el workflow de n8n de la Prueba 1) y muestra KPIs, un chart de ingresos y una lista filtrable y exportable.
 
-> Producción: lo dejo en Vercel. URL en el formulario de entrega.
+**Demo en vivo:** https://formapro-dashboard-bice.vercel.app (datos de prueba, no son clientes reales)
+
+[![CI](https://github.com/Fabio-data/formapro-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/Fabio-data/formapro-dashboard/actions/workflows/ci.yml)
 
 ## Stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TypeScript**
 - **Tailwind v4**
-- **Supabase JS** con la anon key (la service_role NUNCA toca el repo ni el navegador)
-- **Recharts** para el chart
+- **Supabase JS** con la anon key, solo desde el servidor (la service_role NUNCA toca el repo)
+- **Chart en SVG propio**, sin librería de gráficos
 - **Lucide** para iconos
 
 No uso ORM, ni capa de API intermedia, ni librería de estado. Para 1000 filas máximo no hace falta.
@@ -45,7 +47,7 @@ Consecuencia: el filtrado, el cálculo de KPIs y el export viven en cliente, sob
 
 ### Solo anon key, RLS en la base
 
-En este repo nunca aparece la `service_role`. Las únicas envs son `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Ambas van al bundle del cliente — eso es correcto y por diseño: el anon key es público y la seguridad real vive en las policies RLS de la tabla `pagos`.
+En este repo nunca aparece la `service_role`. Las únicas envs son `SUPABASE_URL` y `SUPABASE_ANON_KEY`, sin prefijo `NEXT_PUBLIC_`: `lib/supabase.ts` importa `server-only`, así que el build falla si un componente cliente intenta usarlo y ni la URL ni la key llegan al navegador. Aun así, la seguridad real vive en las policies RLS de la tabla `pagos`.
 
 En Supabase confirmé:
 - RLS habilitado en `pagos`.
@@ -55,7 +57,7 @@ En Supabase confirmé:
 ### Endurecimiento de cabeceras HTTP
 
 `next.config.ts` añade defensa en profundidad por encima de RLS:
-- `Content-Security-Policy` restrictiva (`default-src 'self'`, sin `unsafe-eval` en producción, `connect-src` solo a `*.supabase.co`).
+- `Content-Security-Policy` restrictiva (`default-src 'self'`, sin `unsafe-eval` en producción, `connect-src 'self'`: el navegador no habla con Supabase).
 - `X-Frame-Options: DENY` + `frame-ancestors 'none'` (no embebible).
 - `Strict-Transport-Security` con preload.
 - `Referrer-Policy: strict-origin-when-cross-origin`.
@@ -64,7 +66,7 @@ En Supabase confirmé:
 
 ### Validación del entorno
 
-`lib/supabase.ts` verifica al arrancar que `NEXT_PUBLIC_SUPABASE_URL` apunta a `*.supabase.co`. Si alguien pega un dominio raro por error, falla rápido en build/start en vez de hablar con un servidor extraño.
+`lib/supabase.ts` verifica al arrancar que `SUPABASE_URL` es https y apunta a `*.supabase.co`. Si alguien pega un dominio raro por error, falla rápido en build/start en vez de hablar con un servidor extraño.
 
 ### Moneda formateada desde los datos, no hardcodeada
 
@@ -78,6 +80,12 @@ Además, solo anexo el código ISO cuando el símbolo es ambiguo: `$` es genéri
 
 `lib/csv.ts`: RFC 4180 (escape de comillas duplicadas, salto `\r\n`) y BOM UTF-8 al inicio. Probado en Excel con acentos y comas en nombres.
 
+Como los datos entran por un webhook, los textos que empiezan por `=`, `+`, `-` o `@` se exportan con un apóstrofo delante para que Excel no los ejecute como fórmula (inyección CSV).
+
+### Errores sin detalles internos
+
+Si la query a Supabase falla, el detalle va a los logs del servidor y el visitante solo ve un mensaje genérico.
+
 ## Cómo correrlo en local
 
 ```bash
@@ -89,11 +97,23 @@ npm run dev
 
 Abre `http://localhost:3000`.
 
+Comprobaciones (las mismas que corre el CI en cada push):
+
+```bash
+npm run typecheck   # tsc --noEmit
+npm test            # tests de KPIs, CSV y formato (node --test, sin dependencias)
+npm run build
+```
+
+### Simulador de pagos (solo local)
+
+`tools/simulador.html` dispara pagos de prueba al webhook de n8n (duplicados, reembolsos, datos sucios, 10 en paralelo). Se abre directamente en el navegador y pide la URL del webhook: no se despliega ni trae ninguna URL escrita, porque un webhook público sin autenticación deja que cualquiera inserte pagos.
+
 ## Cómo lo desplegué en Vercel
 
 1. Push del repo a GitHub.
 2. En Vercel: Import Project → seleccionar el repo.
-3. Project Settings → Environment Variables → añadir `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. **Las envs viven solo en Vercel, no en git.**
+3. Project Settings → Environment Variables → añadir `SUPABASE_URL` y `SUPABASE_ANON_KEY`. **Las envs viven solo en Vercel, no en git.**
 4. Deploy.
 
 ## Estructura
@@ -106,16 +126,20 @@ app/
 components/
   dashboard-client.tsx  estado de filtros, derivación de KPIs
   kpi-card.tsx          card de métrica
-  chart-ingresos.tsx    bar chart Recharts
+  chart-ingresos.tsx    chart de ingresos en SVG propio
+  live-refresh.tsx      auto-refresco de datos (pausable)
   pagos-list.tsx        tabla con paginación
   cursos-list.tsx       top cursos con barra de progreso
   filtros.tsx           chips estado, select moneda, dates, search
   boton-export.tsx      trigger CSV
 lib/
-  supabase.ts      cliente compartido + validación de URL
+  supabase.ts      cliente solo-servidor + validación de URL
+  kpis.ts          cálculo de KPIs agrupado por moneda
   format.ts        money, number, date
   csv.ts           serialización RFC 4180 + BOM
   types.ts         Pago, KpiData, FiltrosState
+tests/             tests unitarios de lib/
+tools/             simulador de pagos (no se despliega)
 next.config.ts     security headers
 ```
 

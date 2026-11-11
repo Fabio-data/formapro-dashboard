@@ -10,6 +10,7 @@ import { BotonExport } from "./boton-export";
 import { ThemeToggle } from "./theme-toggle";
 import { LiveRefresh } from "./live-refresh";
 import { formatMoney, formatNumber } from "@/lib/format";
+import { calcularKpis } from "@/lib/kpis";
 import type { Pago, FiltrosState } from "@/lib/types";
 
 const INIT_FILTROS: FiltrosState = {
@@ -48,36 +49,10 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
     });
   }, [pagos, filtros]);
 
-  const completed = filtrados.filter((p) => p.estado === "completed");
-  const refunded = filtrados.filter((p) => p.estado === "refunded");
-
-  // Ingresos por moneda (no sumamos peras con manzanas)
-  const ingresosPorMonedaMap = new Map<string, number>();
-  for (const p of completed) {
-    ingresosPorMonedaMap.set(
-      p.moneda,
-      (ingresosPorMonedaMap.get(p.moneda) ?? 0) + p.importe,
-    );
-  }
-  const ingresosOrdenados = [...ingresosPorMonedaMap.entries()].sort(
-    (a, b) => b[1] - a[1],
-  );
-  const monedaDominante = ingresosOrdenados[0]?.[0];
-
-  let ticketMedio: { valor: number; moneda: string } | null = null;
-  if (monedaDominante) {
-    const ofMon = completed.filter((p) => p.moneda === monedaDominante);
-    if (ofMon.length > 0) {
-      ticketMedio = {
-        valor: ofMon.reduce((a, p) => a + p.importe, 0) / ofMon.length,
-        moneda: monedaDominante,
-      };
-    }
-  }
-
-  const refundsPct = filtrados.length > 0
-    ? (refunded.length / filtrados.length) * 100
-    : 0;
+  // Ingresos por moneda (no sumamos peras con manzanas): ver lib/kpis.ts
+  const kpis = useMemo(() => calcularKpis(filtrados), [filtrados]);
+  const { ticketMedio, totalCompleted, totalRefunds } = kpis;
+  const ingresoDominante = kpis.ingresosPorMoneda[0];
 
   return (
     <main className="max-w-[1240px] mx-auto px-5 md:px-8 py-6 md:py-10 w-full">
@@ -127,15 +102,15 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <KpiCard
           emphasis="primary"
-          label={`Ingresos completed · ${monedaDominante ?? "—"}`}
+          label={`Ingresos completed · ${ingresoDominante?.moneda ?? "—"}`}
           value={
-            ingresosOrdenados.length === 0
-              ? "—"
-              : formatMoney(ingresosOrdenados[0][1], ingresosOrdenados[0][0])
+            ingresoDominante
+              ? formatMoney(ingresoDominante.total, ingresoDominante.moneda)
+              : "—"
           }
           delta={
-            completed.length > 0
-              ? { kind: "up", text: `${completed.length} pago${completed.length === 1 ? "" : "s"}` }
+            totalCompleted > 0
+              ? { kind: "up", text: `${totalCompleted} pago${totalCompleted === 1 ? "" : "s"}` }
               : { kind: "flat", text: "sin completed" }
           }
         />
@@ -145,7 +120,7 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
           hint={
             <>
               <span className="mono text-[color:var(--color-accent-strong)]">
-                {completed.length}
+                {totalCompleted}
               </span>{" "}
               completed
             </>
@@ -165,12 +140,12 @@ export function DashboardClient({ pagos }: { pagos: Pago[] }) {
           }
         />
         <KpiCard
-          emphasis={refunded.length > 0 ? "warn" : "default"}
+          emphasis={totalRefunds > 0 ? "warn" : "default"}
           label="Refunds"
-          value={formatNumber(refunded.length)}
+          value={formatNumber(totalRefunds)}
           delta={
-            refunded.length > 0
-              ? { kind: "down", text: `${refundsPct.toFixed(1)}%` }
+            totalRefunds > 0
+              ? { kind: "down", text: `${kpis.refundsPct.toFixed(1)}%` }
               : { kind: "flat", text: "ninguno" }
           }
         />

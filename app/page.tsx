@@ -12,7 +12,12 @@ async function getPagos(): Promise<{ pagos: Pago[]; error: string | null }> {
     .order("fecha", { ascending: false })
     .limit(1000);
 
-  if (error) return { pagos: [], error: error.message };
+  if (error) {
+    // El detalle queda en los logs del servidor; al visitante no se le
+    // muestran mensajes internos de la base de datos.
+    console.error("Supabase:", error.message);
+    return { pagos: [], error: "No se pudieron cargar los pagos." };
+  }
   return { pagos: (data ?? []) as Pago[], error: null };
 }
 
@@ -26,15 +31,9 @@ export default async function Home() {
           <div className="label-eyebrow mb-2 text-[color:var(--color-danger)]">
             No se pudo leer Supabase
           </div>
-          <p className="text-sm text-[color:var(--color-ink)] mb-3">
-            La query a la tabla{" "}
-            <span className="mono">pagos</span> falló. Revisa que la anon key y
-            la URL estén bien en las variables de entorno, y que la tabla tenga
-            políticas de RLS que permitan SELECT con la anon key.
+          <p className="text-sm text-[color:var(--color-ink)]">
+            {error} Inténtalo de nuevo en unos minutos.
           </p>
-          <pre className="mono text-xs text-[color:var(--color-muted)] whitespace-pre-wrap">
-            {error}
-          </pre>
         </div>
       </main>
     );

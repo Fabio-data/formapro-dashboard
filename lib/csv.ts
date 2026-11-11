@@ -13,7 +13,11 @@ const HEADERS = [
 
 function esc(v: unknown): string {
   if (v == null) return "";
-  const s = String(v);
+  let s = String(v);
+  // Anti inyección de fórmulas: los datos entran por un webhook, así que un
+  // texto como "=HYPERLINK(...)" se ejecutaría al abrir el CSV en Excel.
+  // Los números (p. ej. importes negativos) no se tocan.
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   // RFC 4180: si tiene coma, comilla o salto, envolver en comillas y duplicar comillas
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;

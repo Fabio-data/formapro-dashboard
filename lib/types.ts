@@ -14,7 +14,9 @@ export type Pago = {
 export type KpiData = {
   ingresosPorMoneda: { moneda: string; total: number }[];
   totalPagos: number;
+  totalCompleted: number;
   totalRefunds: number;
+  refundsPct: number;
   ticketMedio: { moneda: string; valor: number } | null;
 };
 

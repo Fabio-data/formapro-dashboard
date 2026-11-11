@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { RefreshCw } from "lucide-react";
@@ -11,28 +11,24 @@ import { RefreshCw } from "lucide-react";
  * refresca cuando la pestaña está visible, para no martillar Supabase en
  * segundo plano. Se puede pausar.
  */
-export function LiveRefresh({ intervalMs = 4000 }: { intervalMs?: number }) {
+export function LiveRefresh({ intervalMs = 10000 }: { intervalMs?: number }) {
   const router = useRouter();
   const [live, setLive] = useState(true);
   const [flash, setFlash] = useState(false);
 
-  useEffect(() => {
-    if (!live) return;
-    const id = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      router.refresh();
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 500);
-      return () => clearTimeout(t);
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [live, intervalMs, router]);
-
-  const manual = () => {
+  const refrescar = useCallback(() => {
     router.refresh();
     setFlash(true);
     setTimeout(() => setFlash(false), 500);
-  };
+  }, [router]);
+
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") refrescar();
+    }, intervalMs);
+    return () => clearInterval(id);
+  }, [live, intervalMs, refrescar]);
 
   return (
     <div className="flex items-center gap-1.5">
@@ -55,7 +51,7 @@ export function LiveRefresh({ intervalMs = 4000 }: { intervalMs?: number }) {
       </button>
       <button
         type="button"
-        onClick={manual}
+        onClick={refrescar}
         title="Actualizar ahora"
         aria-label="Actualizar ahora"
         className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-[color:var(--color-rule)] bg-[color:var(--color-surface)] text-[color:var(--color-ink-soft)] hover:text-[color:var(--color-ink)] hover:border-[color:var(--color-rule-2)] transition-colors"

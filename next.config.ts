@@ -36,8 +36,8 @@ const securityHeaders = [
     ].join(", "),
   },
   // CSP: script-src y style-src admiten 'unsafe-inline' porque Next 16 inyecta
-  // bootstrap inline y Recharts inyecta estilos inline en SVG. connect-src abre
-  // Supabase para queries client-side futuras (hoy la lectura es server-side).
+  // bootstrap inline y los componentes usan estilos inline. connect-src es solo
+  // 'self': Supabase se consulta desde el servidor, el navegador no habla con él.
   {
     key: "Content-Security-Policy",
     value: [
@@ -46,7 +46,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "connect-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
